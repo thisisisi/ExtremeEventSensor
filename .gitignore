@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+# Generated data, checkpoints, and experiment records remain local.
+QG/ML_Data
+QG/ML_Results
+QG/Neural_Nets
+QG/QG_Integration
+QG/ML_Plots/
+QG/figures/
+**/output/
+**/runs/
+**/sweep_configs/
+LowDim/dataset_*/*.png
+LowDim/ML_Results/
+# Local-only work; excluded from publication.
+/KS/
+/validation/

@@ -1,0 +1,85 @@
+{
+  "created_utc": "2026-04-23T19:48:17Z",
+  "master_seed": 192163223548956601317459392394866917268,
+  "semantics": {
+    "reference": "(n_runs, n_ref, 3)",
+    "coarse": "(n_runs, n_coarse, 3)",
+    "nudged": "(n_runs, n_coarse, 3)",
+    "ensemble": "(n_runs, ensemble_size, n_coarse, 3)",
+    "state_order": [
+      "z1",
+      "z2",
+      "z3"
+    ],
+    "note": "Within each run, all trajectories share the same initial state; across runs, initial states are re-sampled."
+  },
+  "cutoff": {
+    "cutoff_time": 0.0,
+    "ref_start_index": 0,
+    "coarse_start_index": 0,
+    "rule": "saved data starts at max(spinup_time, analysis_time)"
+  },
+  "shapes": {
+    "time_reference": [
+      170000
+    ],
+    "time_coarse": [
+      170000
+    ],
+    "initial_states": [
+      2,
+      3
+    ],
+    "reference": [
+      2,
+      170000,
+      3
+    ],
+    "coarse": [
+      2,
+      170000,
+      3
+    ],
+    "nudged": [
+      2,
+      170000,
+      3
+    ],
+    "ensemble": [
+      2,
+      16,
+      170000,
+      3
+    ]
+  },
+  "config": {
+    "t_span": [
+      0.0,
+      510.0
+    ],
+    "initial_state": [
+      0.1,
+      -1.0,
+      0.1
+    ],
+    "n_ref": 170000,
+    "coarse_factor": 1,
+    "spinup_time": 0.0,
+    "tau": 8.0,
+    "n_runs": 2,
+    "ensemble_size": 16,
+    "sigma": 5e-06,
+    "analysis_time": 0.0,
+    "init_state_std": [
+      0.02,
+      0.02,
+      0.02
+    ],
+    "a1": 2.0,
+    "a2": 2.0,
+    "epsilon": 0.05,
+    "b": 20.0,
+    "output_root": "dataset_tau8.00_sigma5e-06",
+    "save_float_dtype": "float32"
+  }
+}

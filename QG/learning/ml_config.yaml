@@ -1,0 +1,28 @@
+data:
+  case_name_train: Qi_Majda_2018_Gaussian_Bumps_03_beta2.0_rdrag0.1_realization4_24x24_sig0.1
+  case_name_test: merged_Qi_Majda_2018_Gaussian_Bumps_03_beta2.0_rdrag0.1_realization2_24x24_tau16.0_sig0
+  basis_type: rnudge16.0
+  dt_ml: 0.1                 # learning sampling interval
+  Ntime_units: 250          # training duration
+  test_time_units: 50000    # evaluation duration
+  T_startup: 1000           # initial duration to skip
+
+training:
+  model_type: STORN         # STORN or LSTM
+  ensemble_index: 1         # trained network index / number loaded for evaluation
+  batch_size: 32
+  learning_rate: 0.001
+  lstm_hist_points: 100
+  Nepochs: 2000
+  # Optional: repeat_index and seed.
+
+paths:
+  neural_nets_dir: ../Neural_Nets
+  ml_results_dir: ../ML_Results
+  data_dir: ../ML_Data
+
+ensemble:
+  enabled: false            # false selects the unconditioned comparator
+  strategy: pooled         # baseline, film, or an ablation name from README
+  n_ens: 8                 # additional input trajectories
+  sig: 0.25                # noise token in member filenames
