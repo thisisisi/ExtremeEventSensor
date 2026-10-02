@@ -35,6 +35,7 @@ class DatasetConfig:
     initial_state: Tuple[float, float, float] = (0.1, -1.0, 0.1)
     n_ref: int = 170_000
     coarse_factor: int = 1
+    save_stride: int = 5
     spinup_time: float = 0.0
     tau: float = 8.0
 
@@ -305,6 +306,7 @@ def save_dataset(
             "nudged": "(n_runs, n_coarse, 3)",
             "ensemble": "(n_runs, ensemble_size, n_coarse, 3)",
             "state_order": ["z1", "z2", "z3"],
+            "save_stride": int(cfg.save_stride),
             "note": "Within each run, all trajectories share the same initial state; across runs, initial states are re-sampled.",
         },
         "cutoff": {
@@ -328,14 +330,35 @@ def save_dataset(
     (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
 
+def stride_for_save(
+    ref_t: np.ndarray,
+    coarse_t: np.ndarray,
+    reference: np.ndarray,
+    coarse: np.ndarray,
+    nudged: np.ndarray,
+    ensemble: np.ndarray,
+    stride: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Keep every ``stride``-th point after integration and truncation."""
+    stride = max(int(stride), 1)
+    return (
+        ref_t[::stride],
+        coarse_t[::stride],
+        reference[:, ::stride, :],
+        coarse[:, ::stride, :],
+        nudged[:, ::stride, :],
+        ensemble[:, :, ::stride, :],
+    )
+
+
 def generate_dataset(
     cfg: DatasetConfig,
     output_dir: Path | None = None,
     seed: int = 0,
 ) -> Path:
     """Generate trajectories and return the directory containing the dataset."""
-    if cfg.n_ref < 2 or cfg.coarse_factor < 1:
-        raise ValueError("n_ref must be at least 2 and coarse_factor must be positive")
+    if cfg.n_ref < 2 or cfg.coarse_factor < 1 or cfg.save_stride < 1:
+        raise ValueError("n_ref must be at least 2; coarse_factor and save_stride must be positive")
     if cfg.n_runs < 1 or cfg.ensemble_size < 1:
         raise ValueError("n_runs and ensemble_size must be positive")
 
@@ -438,6 +461,23 @@ def generate_dataset(
         nudged=nudged,
         ensemble=ensemble,
         cutoff_time=cutoff_time,
+    )
+
+    (
+        ref_t_saved,
+        coarse_t_saved,
+        reference_saved,
+        coarse_saved,
+        nudged_saved,
+        ensemble_saved,
+    ) = stride_for_save(
+        ref_t_saved,
+        coarse_t_saved,
+        reference_saved,
+        coarse_saved,
+        nudged_saved,
+        ensemble_saved,
+        cfg.save_stride,
     )
 
     # After truncation, the saved analysis index is at the first coarse point.

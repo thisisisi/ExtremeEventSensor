@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 
 @dataclass
 class CorrectorConfig:
@@ -20,7 +22,8 @@ class CorrectorConfig:
     run_id_train: int = 0
     run_id_test: int = 1
     n_ensemble_members_used: int = 2
-    ml_stride: int = 5
+    ml_stride: int = 1
+    dataset_save_stride: int = 5
 
     # Repeated runs with identical hyperparameters.
     # If repeat_index is None, a new training run uses the next free _repXXX folder.
@@ -34,7 +37,7 @@ class CorrectorConfig:
     eigencov: bool = True  # Use eigenvectors of ensemble covariance instead of mean/std
     n_eigcov_modes: int = 1  # Number of top eigenvectors to use if eigencov=True
 
-    # Time slicing controls, time step is 0.003
+    # Time slicing controls; the timestep is inferred from the dataset.
     train_time: int = 5
     test_time: int = 500
     train_sequence_length: int = 128
@@ -137,7 +140,17 @@ class CorrectorConfig:
 
     @property
     def base_dt(self) -> float:
-        return 0.003
+        if self.dt_override is not None:
+            return float(self.dt_override)
+
+        with np.load(self.dataset_npz) as data:
+            time = np.asarray(data["time_coarse"], dtype=float)
+        if time.size < 2:
+            raise ValueError("Dataset must contain at least two coarse time points.")
+        dt = np.diff(time)
+        if not np.all(np.isfinite(dt)) or np.any(dt <= 0.0):
+            raise ValueError("Dataset coarse time points must be finite and increasing.")
+        return float(np.median(dt))
 
     @property
     def ml_dt(self) -> float:

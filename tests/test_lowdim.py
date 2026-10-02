@@ -31,8 +31,8 @@ class LowDimTests(unittest.TestCase):
             output = generate_dataset(config, Path(tmp) / "dataset", seed=7)
             self.assertTrue((output / "metadata.json").is_file())
             with np.load(output / "trajectories.npz") as data:
-                self.assertEqual(data["reference"].shape, (2, 21, 3))
-                self.assertEqual(data["ensemble"].shape, (2, 2, 21, 3))
+                self.assertEqual(data["reference"].shape, (2, 5, 3))
+                self.assertEqual(data["ensemble"].shape, (2, 2, 5, 3))
                 self.assertTrue(np.isfinite(data["ensemble"]).all())
 
     def test_reference_interpolation_and_explicit_output_root(self):
@@ -55,11 +55,14 @@ class LowDimTests(unittest.TestCase):
 
     def test_configuration_and_repeat_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
-            cfg = CorrectorConfig(dataset_npz=f'{tmp}/dataset_sigma1e-06/trajectories.npz')
+            dataset = Path(tmp) / 'dataset_sigma1e-06' / 'trajectories.npz'
+            dataset.parent.mkdir()
+            np.savez(dataset, time_coarse=np.array([0.0, 0.015, 0.03]))
+            cfg = CorrectorConfig(dataset_npz=str(dataset))
             self.assertEqual(cfg.ml_dt, 0.015)
-            self.assertEqual(cfg.train_interval_length, 1666)
+            self.assertEqual(cfg.train_interval_length, 333)
             self.assertEqual(cfg.sigma_value, 1e-6)
-            self.assertEqual(cfg.output_stem(), 'sigma1.00e-06_det_attention_ens2_vec1_stride5_T5_run0_1')
+            self.assertEqual(cfg.output_stem(), 'sigma1.00e-06_det_attention_ens2_vec1_stride1_T5_run0_1')
             first = cfg.resolve_output_dir()
             first.mkdir(parents=True)
             self.assertTrue(cfg.resolve_output_dir().name.endswith('_rep001'))

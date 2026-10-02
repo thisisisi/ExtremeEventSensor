@@ -1,6 +1,6 @@
 {
-  "created_utc": "2026-04-23T19:48:17Z",
-  "master_seed": 192163223548956601317459392394866917268,
+  "created_utc": "2026-10-02T02:12:16Z",
+  "master_seed": 0,
   "semantics": {
     "reference": "(n_runs, n_ref, 3)",
     "coarse": "(n_runs, n_coarse, 3)",
@@ -11,6 +11,7 @@
       "z2",
       "z3"
     ],
+    "save_stride": 5,
     "note": "Within each run, all trajectories share the same initial state; across runs, initial states are re-sampled."
   },
   "cutoff": {
@@ -21,10 +22,10 @@
   },
   "shapes": {
     "time_reference": [
-      170000
+      34000
     ],
     "time_coarse": [
-      170000
+      34000
     ],
     "initial_states": [
       2,
@@ -32,23 +33,23 @@
     ],
     "reference": [
       2,
-      170000,
+      34000,
       3
     ],
     "coarse": [
       2,
-      170000,
+      34000,
       3
     ],
     "nudged": [
       2,
-      170000,
+      34000,
       3
     ],
     "ensemble": [
       2,
       16,
-      170000,
+      34000,
       3
     ]
   },
@@ -64,6 +65,7 @@
     ],
     "n_ref": 170000,
     "coarse_factor": 1,
+    "save_stride": 5,
     "spinup_time": 0.0,
     "tau": 8.0,
     "n_runs": 2,
@@ -79,7 +81,6 @@
     "a2": 2.0,
     "epsilon": 0.05,
     "b": 20.0,
-    "output_root": "dataset_tau8.00_sigma5e-06",
     "save_float_dtype": "float32"
   }
 }

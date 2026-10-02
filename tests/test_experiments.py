@@ -45,9 +45,25 @@ class ExperimentTests(unittest.TestCase):
             generated = grid.generate_sweep_configs(copy.deepcopy(config), run_det=False, repeats=1)
             self.assertEqual({cfg['ensemble']['strategy'] for cfg in generated},
                              set(experiments.EXPERIMENTS))
-            self.assertTrue(all(cfg['data']['Ntime_units'] == 50 for cfg in generated))
-            self.assertTrue(all(cfg['ensemble']['n_ens'] == 2 for cfg in generated))
-            self.assertTrue(all(cfg['ensemble']['sig'] == 0.01 for cfg in generated))
+            self.assertEqual(
+                {cfg['data']['Ntime_units'] for cfg in generated},
+                set(sweep.NTIME_UNITS),
+            )
+            self.assertEqual(
+                {cfg['ensemble']['n_ens'] for cfg in generated},
+                set(sweep.N_ENS_LIST),
+            )
+            self.assertEqual(
+                {cfg['ensemble']['sig'] for cfg in generated},
+                set(sweep.SIG_LIST),
+            )
+            expected_count = (
+                len(sweep.NTIME_UNITS)
+                * len(sweep.SIG_LIST)
+                * len(sweep.STRATEGIES)
+                * len(sweep.N_ENS_LIST)
+            )
+            self.assertEqual(len(generated), expected_count)
 
     def test_names_preserve_checkpoint_and_result_paths(self):
         import artifact_paths
