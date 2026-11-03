@@ -2,7 +2,7 @@
 
 This repository uses a small ensemble of intentionally perturbed, low-cost simulations to identify the locally most unstable directions of the dynamics. That information is then used to guide learned corrections to coarse trajectories.
 
-For a light-weight demonstration, see my blog post: [blog](www.mit.edu/~thieli/writing/neurips/).
+For a light-weight demonstration, see my blog post: [blog](https://www.mit.edu/~thieli/writing/neurips/).
 
 Full details can be found in the accompanying paper: [arXiv:2609.30746](https://arxiv.org/abs/2609.30746).
 
