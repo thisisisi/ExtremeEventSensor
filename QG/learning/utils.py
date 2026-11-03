@@ -159,10 +159,16 @@ def tau_from_basis(basis_type: str) -> str:
     return s.split('rnudge')[-1] if s.startswith('rnudge') and len(s) > 6 else ''
 
 def load_member_field(data_dir: str, case_name: str, nb: int, member_index: int, *, basis_type: str, sig: str):
-    """Strict path: psi{nb}_ens{mm}_sig{sig}_{tau}.mat"""
+    """Load a member using either the current or stored rnudge filename."""
     mm = f"{int(member_index):02d}"
     tau = tau_from_basis(basis_type)
-    path = os.path.join(data_dir, case_name, f"psi{nb}_{basis_type}_ens{mm}_sig{sig}_{tau}.mat")
+    case_dir = os.path.join(data_dir, case_name)
+    candidates = [os.path.join(case_dir, f"psi{nb}_{basis_type}_ens{mm}_sig{sig}_{tau}.mat")]
+    if str(basis_type).startswith('rnudge'):
+        candidates.append(os.path.join(case_dir, f"psi{nb}_rnudge_ens{mm}_{tau}.mat"))
+    path = next((candidate for candidate in candidates if os.path.isfile(candidate)), None)
+    if path is None:
+        raise FileNotFoundError(f"Ensemble member file not found; tried: {', '.join(candidates)}")
     m = sio.loadmat(path)
     for k, v in m.items():
         if isinstance(v, np.ndarray) and v.ndim == 3:

@@ -43,8 +43,10 @@ class QGTests(unittest.TestCase):
             field = np.arange(80).reshape(2, 2, 20)
             sio.savemat(case / 'psi1_rnudge16.0.mat', {'psi1_rnudge': field})
             sio.savemat(case / 'psi1_rnudge16.0_ens01_sig0.01_16.0.mat', {'member': field})
+            sio.savemat(case / 'psi2_rnudge_ens01_16.0.mat', {'member': field})
             np.testing.assert_array_equal(utils.load_field(tmp, 'case', 'rnudge16.0', 1), field)
             np.testing.assert_array_equal(utils.load_member_field(tmp, 'case', 1, 1, basis_type='rnudge16.0', sig='0.01'), field)
+            np.testing.assert_array_equal(utils.load_member_field(tmp, 'case', 2, 1, basis_type='rnudge16.0', sig='0.01'), field)
         self.assertEqual(utils.compute_skip_and_length({'data_times': 20, 'tstart': 0}, 0.2, 0.5, 0.1), (2, 6))
         np.testing.assert_array_equal(film._make_window_indices(9, 3, 2, 3), [[0, 2, 4], [3, 5, 7]])
 

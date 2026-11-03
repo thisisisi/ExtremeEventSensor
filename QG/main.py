@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent
 LEARNING = ROOT / 'learning'
 
 
-def execute(config, stage, backend='local', dry_run=False):
+def execute(config, stage, backend='local', dry_run=False, log_submissions=True):
     """Run stages in independent processes, as in the original batch workflow."""
     stages = ('train', 'evaluate') if stage == 'run' else (stage,)
     if dry_run:
@@ -22,7 +22,7 @@ def execute(config, stage, backend='local', dry_run=False):
         for item in stages:
             subprocess.run([sys.executable, str(LEARNING / f'{item}_qg.py'),
                             '--config_file', str(config)], cwd=LEARNING, check=True)
-        return
+        return []
     
     import sweep
     import yaml
@@ -43,9 +43,33 @@ def execute(config, stage, backend='local', dry_run=False):
     os.environ.setdefault("PYTHON_BIN", sys.executable)
     log = sweep.init_sweep_log()
     dependency = None
+    submitted = []
     for item in stages:
         dependency = sweep.submit_job(config, meta, log, stage=item, dependency=dependency)
-        print(f'{item}: submitted job {dependency}', flush=True)
+        submitted.append((item, dependency))
+        if log_submissions:
+            print(f'{item}: submitted job {dependency}', flush=True)
+    return submitted
+
+
+def sweep_config_label(cfg):
+    """Show the parameters that identify one sweep configuration."""
+    ensemble = cfg.get('ensemble', {})
+    enabled = ensemble.get('enabled', False)
+    n_add = int(ensemble.get('n_ens', 0)) if enabled else 0
+    n_members = n_add
+    if enabled and ensemble.get('strategy') == 'pooled':
+        n_members += int(ensemble.get('include_baseline', True))
+    if enabled:
+        from experiments import artifact_id
+        strategy = f"{ensemble['strategy']} ({artifact_id(ensemble['strategy'])})"
+        sig = ensemble.get('sig', '?')
+    else:
+        strategy = 'deterministic'
+        sig = cfg['data']['case_name_train'].rsplit('_sig', 1)[-1]
+    return (f"sig={sig} strategy={strategy} N_add={n_add} N_members={n_members} "
+            f"T_train={cfg['data']['Ntime_units']} "
+            f"repeat={cfg['training']['repeat_index']} seed={cfg['training']['seed']}")
 
 
 def main():
@@ -62,8 +86,8 @@ def main():
         sub.add_argument('--dry-run', action='store_true', help='Print the plan without running or submitting.')
         if name == 'sweep':
             sub.add_argument('stage', choices=('run', 'train', 'evaluate'), nargs='?', default='run')
-            sub.add_argument('--repeats', type=int, default=3)
-            sub.add_argument('--repeat-offset', type=int, default=1)
+            sub.add_argument('--repeats', type=int, help='Overrides DEFAULT_REPEATS in learning/sweep.py.')
+            sub.add_argument('--repeat-offset', type=int, help='Overrides DEFAULT_REPEAT_OFFSET in learning/sweep.py.')
             sub.add_argument('--interval', type=float, default=0, help='Seconds between configurations.')
     
     report = actions.add_parser('report', help='Compare completed runs and generate tables/figures.')
@@ -91,35 +115,63 @@ def main():
     if args.action != 'sweep':
         execute(config, args.action, args.backend, args.dry_run)
         return
-    if args.repeats < 1 or args.interval < 0:
-        parser.error('--repeats must be positive and --interval nonnegative')
     import sweep
+    repeats = sweep.DEFAULT_REPEATS if args.repeats is None else args.repeats
+    repeat_offset = sweep.DEFAULT_REPEAT_OFFSET if args.repeat_offset is None else args.repeat_offset
+    if repeats < 1 or args.interval < 0:
+        parser.error('--repeats must be positive and --interval nonnegative')
     from sweep_artifacts import model_artifact_path, result_artifact_path
-    configs = sweep.generate_sweep_configs(sweep.load_base_config(config),
-                                           repeats=args.repeats, repeat_offset=args.repeat_offset)
-    print(f'{len(configs)} configurations; grid: QG/learning/sweep.py')
+    base_config = sweep.load_base_config(config)
+    configs = sweep.generate_sweep_configs(base_config,
+                                           repeats=repeats, repeat_offset=repeat_offset)
+    print(f'=== QG SWEEP: {len(configs)} configurations | repeats={repeats} '
+          f'| repeat_offset={repeat_offset} | stage={args.stage} | backend={args.backend} ===', flush=True)
+    print('Grid: QG/learning/sweep.py | Base settings: ' + str(config), flush=True)
+    print(f'Grid values: sig={sweep.SIG_LIST} strategies={sweep.STRATEGIES} '
+          f'N_add={sweep.N_ENS_LIST} T_train={sweep.NTIME_UNITS} '
+          f'deterministic={sweep.RUN_DET} T_det={sweep.DET_NTIME_UNITS} '
+          f'base_seed={sweep.BASE_SEED} (seed=base_seed+repeat)', flush=True)
+    print('Sweep replaces YAML train/test case names, Ntime_units, ensemble settings, '
+          'training.repeat_index, and training.seed.', flush=True)
+    print('Existing outputs are matched by repeat index, not seed; changing BASE_SEED '
+          'alone does not resubmit completed repeats.', flush=True)
+    print(f"Model={configs[0]['training']['model_type']} epochs={configs[0]['training']['Nepochs']} "
+          f"T_test={configs[0]['data']['test_time_units']} "
+          f"test_case={configs[0]['data']['case_name_test']}", flush=True)
+    submitted_count = 0
     for index, cfg in enumerate(configs):
         stage = args.stage
+        label = sweep_config_label(cfg)
+        position = f'[{index + 1}/{len(configs)}]'
         model_exists = Path(model_artifact_path(cfg)).is_file()
         result_exists = Path(result_artifact_path(cfg)).is_file()
         
         # Switch between stages if the requested stage is not possible, and skip if the output already exists.
         if (stage == 'train' and model_exists) or (stage != 'train' and result_exists):
-            print(f'{index + 1}: skip existing {stage} output')
+            print(f'{position} skip existing {stage} | {label}', flush=True)
             continue
         if stage == 'evaluate' and not model_exists and not args.dry_run:
             raise FileNotFoundError(model_artifact_path(cfg))
         if stage == 'run' and model_exists:
             stage = 'evaluate'
         if args.dry_run:
-            print(f'{index + 1}: {args.backend} {stage} | {cfg["ensemble"]} | '
-                  f'T={cfg["data"]["Ntime_units"]} repeat={cfg["training"]["repeat_index"]} '
-                  f'seed={cfg["training"]["seed"]} train={cfg["data"]["case_name_train"]}')
+            print(f'{position} preview {stage} | {label}', flush=True)
             continue
         path = sweep.write_config(cfg, f'{time.time_ns()}_{index}', cfg['training']['repeat_index']).resolve()
-        execute(path, stage, args.backend)
+        submitted = execute(path, stage, args.backend, log_submissions=False)
+        if args.backend == 'local':
+            print(f'{position} completed {stage} | {label}', flush=True)
+        for job_stage, job_id in submitted:
+            submitted_count += 1
+            print(f'{position} submitted {job_stage} job={job_id} | {label}', flush=True)
+            if submitted_count % 25 == 0:
+                print(f'=== {submitted_count} Slurm jobs submitted; '
+                      f'{index + 1}/{len(configs)} configurations checked ===', flush=True)
         if args.interval and index < len(configs) - 1:
             time.sleep(args.interval)
+    if not args.dry_run and args.backend == 'slurm':
+        print(f'=== SWEEP SUBMISSION COMPLETE: {submitted_count} Slurm jobs submitted; '
+              f'{len(configs)} configurations checked ===', flush=True)
 
 
 if __name__ == '__main__':

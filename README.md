@@ -78,9 +78,9 @@ For QG, edit the grid near the top of [`QG/learning/sweep.py`](QG/learning/sweep
 [`SIG_LIST`](QG/learning/sweep.py#L13) controls perturbation strengths, [`STRATEGIES`](QG/learning/sweep.py#L14) controls conditioning methods, [`N_ENS_LIST`](QG/learning/sweep.py#L16) controls ensemble sizes, and [`NTIME_UNITS`](QG/learning/sweep.py#L17) controls training-data lengths. `DET_NTIME_UNITS` contains the deterministic comparison lengths. Then run:
 
 ```bash
-python main.py qg sweep --dry-run --repeats 3
+python main.py qg sweep --dry-run
 ```
-Remove `--dry-run` to run it locally, or add `--backend slurm` to submit it to Slurm (recommended).
+The repeat count and starting index default to `DEFAULT_REPEATS` and `DEFAULT_REPEAT_OFFSET` in `QG/learning/sweep.py`. Use `--repeats N` or `--repeat-offset N` to override either value for one invocation. Remove `--dry-run` to run locally, or add `--backend slurm` to submit to Slurm (recommended).
 
 For LowDim, pass ensemble sizes and conditioning choices directly. `false` uses ensemble mean/spread, `true` uses covariance eigenvectors, and ensemble size `0` runs the unconditioned baseline:
 

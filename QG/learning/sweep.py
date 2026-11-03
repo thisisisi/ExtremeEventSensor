@@ -10,7 +10,7 @@ from sweep_artifacts import model_artifact_path
 TRAIN_TEMPLATE = "Qi_Majda_2018_Gaussian_Bumps_03_beta2.0_rdrag0.1_realization4_24x24_sig{}"
 TEST_TEMPLATE  = "merged_Qi_Majda_2018_Gaussian_Bumps_03_beta2.0_rdrag0.1_realization2_24x24_tau16.0_sig0"
 
-SIG_LIST       = [0.01, 0.4]
+SIG_LIST       = [0.01]
 STRATEGIES     = ["baseline", "pooled", "film", "random_context", "coarse_statistics", "ensemble_mean", "ensemble_variance", "covariance_concat", "mean_spread_concat"]
 # Preregistered mechanism-control design: T_train=50, sigma=0.01, N_add=2.
 N_ENS_LIST     = [2]
@@ -18,8 +18,9 @@ NTIME_UNITS    = [50]
 # Deterministic comparators are trained at both the short- and long-data limits.
 DET_NTIME_UNITS = [50, 1000]
 RUN_DET = True
-DEFAULT_REPEATS = 3
-DEFAULT_REPEAT_OFFSET = 1
+DEFAULT_REPEATS = 5 # number of repeats for each configuration (for determining variability in performance)
+DEFAULT_REPEAT_OFFSET = 1 # starting index for repeat numbering (for continuing a sweep after a crash or interruption + setting the random seed schedule to match the original sweep)
+
 BASE_SEED = 1
 
 SWEEP_LOG_HEADER = (
@@ -81,10 +82,11 @@ def base_overrides(cfg, train_case, test_case, ntime_units):
 def add_repeat_metadata(cfg, repeat_index):
     cfg.setdefault("training", {})
     cfg["training"]["repeat_index"] = int(repeat_index)
+    # Sweep seeds are controlled by BASE_SEED, even if the base YAML has a seed.
     cfg["training"]["seed"] = int(BASE_SEED + repeat_index)
     return cfg
 
-def generate_sweep_configs(base_config, run_det = True, repeats=DEFAULT_REPEATS, repeat_offset=DEFAULT_REPEAT_OFFSET):
+def generate_sweep_configs(base_config, run_det=RUN_DET, repeats=DEFAULT_REPEATS, repeat_offset=DEFAULT_REPEAT_OFFSET):
     configs = []
 
     for repeat in range(repeat_offset, repeat_offset + max(1, int(repeats))):
